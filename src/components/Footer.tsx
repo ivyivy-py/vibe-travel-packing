@@ -62,6 +62,12 @@ export const Footer: React.FC<FooterProps> = ({ onSelectView }) => {
                   Matsuri & Event Calendar
                 </button>
               </li>
+              <li>
+                <button onClick={() => onSelectView('talk-to-us')} className="hover:text-white transition-colors flex items-center gap-1">
+                  <span>Talk to Us (Community)</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#97f5ca]"></span>
+                </button>
+              </li>
             </ul>
           </div>
 

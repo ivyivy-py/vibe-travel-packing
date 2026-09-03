@@ -3,7 +3,8 @@ export type AppView =
   | 'visa-checker' 
   | 'packing-weather' 
   | 'destination-events' 
-  | 'saved-trips';
+  | 'saved-trips'
+  | 'talk-to-us';
 
 export type Season = 'summer' | 'autumn' | 'winter' | 'spring';
 

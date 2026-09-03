@@ -8,6 +8,7 @@ import { VisaCheckerView } from './components/VisaCheckerView';
 import { PackingWeatherView } from './components/PackingWeatherView';
 import { DestinationEventsView } from './components/DestinationEventsView';
 import { SavedTripsView } from './components/SavedTripsView';
+import { TalkToUsView } from './components/TalkToUsView';
 import { NewTripModal } from './components/NewTripModal';
 import { SeasonProvider, useSeason } from './context/SeasonContext';
 import { detectSeason, SEASON_THEMES } from './utils/seasonTheme';
@@ -220,6 +221,10 @@ function AppContent() {
             onOpenNewTripModal={() => setIsNewTripModalOpen(true)}
             onDeleteTrip={handleDeleteTrip}
           />
+        )}
+
+        {currentView === 'talk-to-us' && (
+          <TalkToUsView onNavigateToView={setCurrentView} />
         )}
       </main>
 

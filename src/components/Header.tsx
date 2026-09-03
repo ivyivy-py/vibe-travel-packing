@@ -45,6 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'packing-weather', label: 'Packing & Weather', icon: 'luggage' },
     { id: 'destination-events', label: 'Destination Events', icon: 'event' },
     { id: 'saved-trips', label: 'Saved Trips', icon: 'bookmark' },
+    { id: 'talk-to-us', label: 'Talk to Us', icon: 'forum' },
   ];
 
   return (
