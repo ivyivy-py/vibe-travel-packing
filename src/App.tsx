@@ -11,7 +11,7 @@ import { SavedTripsView } from './components/SavedTripsView';
 import { NewTripModal } from './components/NewTripModal';
 import { SeasonProvider, useSeason } from './context/SeasonContext';
 import { detectSeason, SEASON_THEMES } from './utils/seasonTheme';
-import { lookupDestinationIntelligence } from './services/destinationService';
+import { lookupDestinationIntelligence, getPassportConsularAdvisory } from './services/destinationService';
 
 function AppContent() {
   const [currentView, setCurrentView] = useState<AppView>('trip-planner');
@@ -55,6 +55,42 @@ function AppContent() {
     setNotifications(prev =>
       prev.map(n => (n.id === id ? { ...n, read: true } : n))
     );
+  };
+
+  const handleUpdatePassportNationality = (nationality: string) => {
+    if (!activeDestination) return;
+    const advisory = getPassportConsularAdvisory(
+      nationality,
+      activeDestination.country,
+      activeDestination.city,
+      activeDestination.travelDates
+    );
+
+    const updatedDestination: DestinationData = {
+      ...activeDestination,
+      passportNationality: nationality,
+      visa: advisory.visa,
+      entryStatusSummary: advisory.entryStatusSummary,
+      entryStatusSubtext: advisory.entryStatusSubtext,
+    };
+
+    setAllDestinations(prev => ({
+      ...prev,
+      [activeDestination.id]: updatedDestination,
+    }));
+
+    setNotifications(prev => [
+      {
+        id: `notif-${Date.now()}`,
+        title: `Consular Advisory: ${nationality} Passport`,
+        message: `${nationality} ➔ ${activeDestination.city}: ${advisory.entryStatusSummary}`,
+        timeAgo: 'Just now',
+        read: false,
+        type: 'visa',
+        actionView: 'visa-checker',
+      },
+      ...prev,
+    ]);
   };
 
   // Dynamic Lookup when user inputs dates & location
@@ -158,6 +194,7 @@ function AppContent() {
             destination={activeDestination}
             currency={currency}
             onSelectDestination={handleSelectDestination}
+            onUpdatePassportNationality={handleUpdatePassportNationality}
           />
         )}
 

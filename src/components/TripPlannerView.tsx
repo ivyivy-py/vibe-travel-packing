@@ -120,6 +120,9 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
 
   const popularWorldCorridors = [
     { label: 'Tokyo, Japan', flag: '🇯🇵', id: 'tokyo' },
+    { label: 'Kuala Lumpur, Malaysia', flag: '🇲🇾', id: 'kualalumpur' },
+    { label: 'Hong Kong SAR', flag: '🇭🇰', id: 'hongkong' },
+    { label: 'Beijing, China', flag: '🇨🇳', id: 'beijing' },
     { label: 'Sydney, Australia', flag: '🇦🇺', id: 'sydney' },
     { label: 'Paris, France', flag: '🇫🇷', id: 'paris' },
     { label: 'Reykjavik, Iceland', flag: '🇮🇸', id: 'reykjavik' },
@@ -318,9 +321,23 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
               </label>
               <select
                 value={passportInput}
-                onChange={(e) => setPassportInput(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPassportInput(val);
+                  // Auto-lookup with updated nationality
+                  setIsLookingUp(true);
+                  onLookupDestination({
+                    location: locationInput.trim(),
+                    startDate: startDateInput,
+                    endDate: endDateInput,
+                    passportNationality: val,
+                  }).finally(() => setIsLookingUp(false));
+                }}
                 className="w-full h-11 px-2.5 rounded-xl bg-white text-xs font-semibold text-[#0b1c30] border border-[#dce9ff] focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 shadow-2xs"
               >
+                <option value="China">🇨🇳 China (PRC Ordinary)</option>
+                <option value="Hong Kong">🇭🇰 Hong Kong (HKSAR)</option>
+                <option value="Malaysia">🇲🇾 Malaysia (Pasport Malaysia)</option>
                 <option value="United States">🇺🇸 United States</option>
                 <option value="United Kingdom">🇬🇧 United Kingdom</option>
                 <option value="Canada">🇨🇦 Canada</option>
@@ -355,8 +372,48 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
 
           </div>
 
+          {/* Quick Passport Advisory Switches */}
+          <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-black/5 text-xs">
+            <span className="text-[11px] font-bold text-[#74777e] uppercase tracking-wider mr-1">Passport Advisory:</span>
+            {[
+              { label: 'China', flag: '🇨🇳', title: 'China Passport' },
+              { label: 'Hong Kong', flag: '🇭🇰', title: 'Hong Kong Passport' },
+              { label: 'Malaysia', flag: '🇲🇾', title: 'Malaysian Passport' },
+              { label: 'United States', flag: '🇺🇸', title: 'US Passport' },
+              { label: 'United Kingdom', flag: '🇬🇧', title: 'UK Passport' },
+              { label: 'Australia', flag: '🇦🇺', title: 'Australia' },
+            ].map((p) => {
+              const isActive = passportInput.toLowerCase().includes(p.label.toLowerCase()) || 
+                (destination.passportNationality && destination.passportNationality.toLowerCase().includes(p.label.toLowerCase()));
+              return (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => {
+                    setPassportInput(p.label);
+                    setIsLookingUp(true);
+                    onLookupDestination({
+                      location: locationInput.trim(),
+                      startDate: startDateInput,
+                      endDate: endDateInput,
+                      passportNationality: p.label,
+                    }).finally(() => setIsLookingUp(false));
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border ${
+                    isActive
+                      ? 'bg-[#0c1e34] text-white border-[#0c1e34] shadow-xs'
+                      : 'bg-white/80 hover:bg-white text-[#0b1c30] border-[#dce9ff]'
+                  }`}
+                >
+                  <span>{p.flag}</span>
+                  <span>{p.title}</span>
+                </button>
+              );
+            })}
+          </div>
+
           {/* Seasonal Presets Quick Buttons */}
-          <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-black/5 text-xs">
+          <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-black/5 text-xs">
             <span className="text-[11px] font-bold text-[#74777e]">Quick Season Projections:</span>
             <button
               type="button"

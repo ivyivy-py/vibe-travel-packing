@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { DestinationData, Currency } from '../types';
+import { getPassportConsularAdvisory } from '../services/destinationService';
 
 interface VisaCheckerViewProps {
   destination: DestinationData;
   currency: Currency;
   onSelectDestination: (id: string) => void;
+  onUpdatePassportNationality?: (nationality: string) => void;
 }
 
 export const VisaCheckerView: React.FC<VisaCheckerViewProps> = ({
   destination,
   currency,
   onSelectDestination,
+  onUpdatePassportNationality,
 }) => {
   const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(0);
   const [dossierState, setDossierState] = useState<Record<string, boolean>>({
@@ -22,17 +25,32 @@ export const VisaCheckerView: React.FC<VisaCheckerViewProps> = ({
     'v2': true,
     'v3': true,
     'v4': false,
+    'cn_my_1': true,
+    'cn_my_2': true,
+    'cn_jp_1': true,
+    'cn_eu_1': true,
+    'my_cn_1': true,
+    'hk_jp_1': true,
   });
 
   const [showParamModal, setShowParamModal] = useState(false);
-  const [selectedNationality, setSelectedNationality] = useState(destination.passportNationality);
+  const [selectedNationality, setSelectedNationality] = useState(destination.passportNationality || 'United States');
   const [selectedDestId, setSelectedDestId] = useState(destination.id);
 
   const toggleDossier = (id: string) => {
     setDossierState(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const visa = destination.visa;
+  // Get active consular advisory result which contains special bilateral notices
+  const consularAdvisory = getPassportConsularAdvisory(
+    destination.passportNationality || 'United States',
+    destination.country,
+    destination.city,
+    destination.travelDates
+  );
+
+  const visa = consularAdvisory.visa || destination.visa;
+  const specialNotice = consularAdvisory.specialNotice;
 
   // Currency multiplier conversion simulation
   const formatCurrency = (usdAmount: number) => {
@@ -49,29 +67,71 @@ export const VisaCheckerView: React.FC<VisaCheckerViewProps> = ({
     <div className="space-y-6">
       
       {/* Context Bar */}
-      <div className="bg-white rounded-3xl p-5 md:p-6 shadow-xs border border-[#eff4ff] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#eff4ff] border border-[#dce9ff]">
-            <span className="text-xs font-semibold text-[#74777e]">Passport:</span>
-            <span className="text-xs font-bold text-[#0b1c30]">{destination.passportNationality}</span>
+      <div className="bg-white rounded-3xl p-5 md:p-6 shadow-xs border border-[#eff4ff] space-y-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#eff4ff] border border-[#dce9ff]">
+              <span className="text-xs font-semibold text-[#74777e]">Active Passport:</span>
+              <span className="text-xs font-bold text-[#0b1c30] flex items-center gap-1.5">
+                <span>{consularAdvisory.passportCountryFlag}</span>
+                <span>{destination.passportNationality}</span>
+              </span>
+            </div>
+            <span className="material-symbols-outlined text-[16px] text-[#74777e]">arrow_forward</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#eff4ff] border border-[#dce9ff]">
+              <span className="text-xs font-semibold text-[#74777e]">Destination:</span>
+              <span className="text-xs font-bold text-[#0b1c30]">{destination.city} ({destination.airportCode.split(' ')[0]})</span>
+              <span>{destination.countryFlag}</span>
+            </div>
+            <span className="material-symbols-outlined text-[16px] text-[#74777e]">calendar_today</span>
+            <span className="text-xs text-[#44474d] font-medium">{destination.travelDates}</span>
           </div>
-          <span className="material-symbols-outlined text-[16px] text-[#74777e]">arrow_forward</span>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#eff4ff] border border-[#dce9ff]">
-            <span className="text-xs font-semibold text-[#74777e]">Destination:</span>
-            <span className="text-xs font-bold text-[#0b1c30]">{destination.city} ({destination.airportCode.split(' ')[0]})</span>
-            <span>{destination.countryFlag}</span>
-          </div>
-          <span className="material-symbols-outlined text-[16px] text-[#74777e]">calendar_today</span>
-          <span className="text-xs text-[#44474d] font-medium">{destination.travelDates}</span>
+
+          <button
+            onClick={() => setShowParamModal(true)}
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-[#eff4ff] text-[#0c1e34] hover:bg-[#dce9ff] border border-[#dce9ff] transition-all flex items-center gap-1.5"
+          >
+            <span className="material-symbols-outlined text-[16px]">tune</span>
+            Change Parameters
+          </button>
         </div>
 
-        <button
-          onClick={() => setShowParamModal(true)}
-          className="px-4 py-2 rounded-xl text-xs font-bold bg-[#eff4ff] text-[#0c1e34] hover:bg-[#dce9ff] border border-[#dce9ff] transition-all flex items-center gap-1.5"
-        >
-          <span className="material-symbols-outlined text-[16px]">tune</span>
-          Change Parameters
-        </button>
+        {/* Quick Passport Advisory Switcher Chips */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-3 border-t border-[#eff4ff]">
+          <span className="text-[11px] font-bold text-[#74777e] uppercase tracking-wider mr-1">
+            Switch Passport Advisory:
+          </span>
+          {[
+            { label: 'China', flag: '🇨🇳', title: 'China Passport (PRC)' },
+            { label: 'Hong Kong', flag: '🇭🇰', title: 'Hong Kong (HKSAR)' },
+            { label: 'Malaysia', flag: '🇲🇾', title: 'Malaysia Passport' },
+            { label: 'United States', flag: '🇺🇸', title: 'United States' },
+            { label: 'United Kingdom', flag: '🇬🇧', title: 'United Kingdom' },
+            { label: 'Australia', flag: '🇦🇺', title: 'Australia' },
+          ].map((opt) => {
+            const isSelected = destination.passportNationality && 
+              destination.passportNationality.toLowerCase().includes(opt.label.toLowerCase());
+            return (
+              <button
+                key={opt.label}
+                onClick={() => {
+                  setSelectedNationality(opt.label);
+                  if (onUpdatePassportNationality) {
+                    onUpdatePassportNationality(opt.label);
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border ${
+                  isSelected
+                    ? 'bg-[#0c1e34] text-white border-[#0c1e34] shadow-xs'
+                    : 'bg-[#eff4ff] hover:bg-[#dce9ff] text-[#0b1c30] border-[#dce9ff]'
+                }`}
+              >
+                <span>{opt.flag}</span>
+                <span>{opt.title}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Main Visa Status Banner */}
@@ -124,11 +184,54 @@ export const VisaCheckerView: React.FC<VisaCheckerViewProps> = ({
               </div>
             )}
             <div className="text-[11px] text-[#7686a1] border-t border-white/10 pt-2 mt-2">
-              Valid at 28 designated international airports and 5 major seaports.
+              Verified against immigration and boundary control checkpoints.
             </div>
           </div>
         </div>
       </div>
+
+      {/* Special Bilateral Consular Notice Callout */}
+      {specialNotice && (
+        <div className={`p-5 md:p-6 rounded-3xl border shadow-xs transition-all ${
+          specialNotice.type === 'success'
+            ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+            : specialNotice.type === 'warning'
+            ? 'bg-amber-50/90 border-amber-200 text-amber-950'
+            : 'bg-blue-50/80 border-blue-200 text-blue-950'
+        }`}>
+          <div className="flex items-start gap-3">
+            <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider shrink-0 ${
+              specialNotice.type === 'success'
+                ? 'bg-emerald-700 text-white'
+                : specialNotice.type === 'warning'
+                ? 'bg-amber-700 text-white'
+                : 'bg-blue-700 text-white'
+            }`}>
+              {specialNotice.badge}
+            </span>
+            <div className="flex-1">
+              <h4 className="font-bold text-base text-[#0b1c30]">
+                {specialNotice.headline}
+              </h4>
+              <p className="text-xs mt-1 text-[#44474d] leading-relaxed">
+                {specialNotice.details}
+              </p>
+              {specialNotice.highlights && specialNotice.highlights.length > 0 && (
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {specialNotice.highlights.map((h, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs bg-white/70 p-2 rounded-xl border border-black/5">
+                      <span className="material-symbols-outlined text-[16px] text-emerald-600 shrink-0 mt-0.5">
+                        check_circle
+                      </span>
+                      <span className="font-medium text-[#0b1c30]">{h}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Two Column Content: Left (Timeline + Dossier + FAQs) & Right (Official Verification + Fees + Consulates) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -390,6 +493,11 @@ export const VisaCheckerView: React.FC<VisaCheckerViewProps> = ({
                   className="w-full p-2.5 rounded-xl border border-[#dce9ff] text-xs font-semibold bg-[#eff4ff]"
                 >
                   <option value="tokyo">Tokyo, Japan (HND/NRT)</option>
+                  <option value="kualalumpur">Kuala Lumpur, Malaysia (KUL)</option>
+                  <option value="hongkong">Hong Kong SAR (HKG)</option>
+                  <option value="beijing">Beijing, China (PEK/PKX)</option>
+                  <option value="sydney">Sydney, Australia (SYD)</option>
+                  <option value="paris">Paris, France (CDG)</option>
                   <option value="reykjavik">Reykjavik, Iceland (KEF)</option>
                   <option value="kyoto">Kyoto & Osaka, Japan (KIX)</option>
                   <option value="newdelhi">New Delhi, India (DEL)</option>
@@ -403,12 +511,15 @@ export const VisaCheckerView: React.FC<VisaCheckerViewProps> = ({
                   onChange={(e) => setSelectedNationality(e.target.value)}
                   className="w-full p-2.5 rounded-xl border border-[#dce9ff] text-xs font-semibold bg-[#eff4ff]"
                 >
-                  <option value="United States">United States</option>
-                  <option value="Australia">Australia</option>
-                  <option value="United Kingdom">United Kingdom</option>
-                  <option value="Canada">Canada</option>
-                  <option value="Germany / EU">Germany / EU</option>
-                  <option value="Singapore">Singapore</option>
+                  <option value="China">🇨🇳 China (PRC Ordinary)</option>
+                  <option value="Hong Kong">🇭🇰 Hong Kong (HKSAR)</option>
+                  <option value="Malaysia">🇲🇾 Malaysia (Pasport Malaysia)</option>
+                  <option value="United States">🇺🇸 United States</option>
+                  <option value="Australia">🇦🇺 Australia</option>
+                  <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                  <option value="Canada">🇨🇦 Canada</option>
+                  <option value="Germany / EU">🇪🇺 Germany / EU</option>
+                  <option value="Singapore">🇸🇬 Singapore</option>
                 </select>
               </div>
 
@@ -422,6 +533,9 @@ export const VisaCheckerView: React.FC<VisaCheckerViewProps> = ({
                 <button
                   onClick={() => {
                     onSelectDestination(selectedDestId);
+                    if (onUpdatePassportNationality) {
+                      onUpdatePassportNationality(selectedNationality);
+                    }
                     setShowParamModal(false);
                   }}
                   className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-[#0c1e34] text-white"

@@ -13,7 +13,7 @@ export type PlannerSubTab =
   | 'packing' 
   | 'events';
 
-export type Currency = 'USD' | 'EUR' | 'JPY' | 'GBP' | 'AUD';
+export type Currency = 'USD' | 'EUR' | 'JPY' | 'GBP' | 'AUD' | 'CNY' | 'HKD' | 'MYR';
 export type TempUnit = 'C' | 'F';
 
 export interface WeatherDay {
@@ -60,7 +60,7 @@ export interface TravelEvent {
 export interface VisaDetails {
   status: 'Visa-Free' | 'ETA / e-Visa' | 'Visa Required' | 'Visa on Arrival';
   durationDays: number;
-  entryType: 'Single Entry' | 'Double Entry' | 'Multiple Entry';
+  entryType: 'Single Entry' | 'Double Entry' | 'Multiple Entry' | string;
   summaryTitle: string;
   summarySubtitle: string;
   validityRequirement: string;
