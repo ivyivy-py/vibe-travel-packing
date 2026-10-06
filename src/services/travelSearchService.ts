@@ -2,7 +2,40 @@ import { TravelSearchParams, TravelSearchResults, FlightOffer, HotelOffer } from
 
 const SMITHERY_ENDPOINT = 'https://mcp.smithery.ai/ivy-poon';
 
+// Helper to get default dates: today + 7 days for destination date, today + 14 days for return date
+export function getInitialDates() {
+  const now = new Date();
+  const plus7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const plus14 = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+  const formatDate = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  return {
+    destinationDate: formatDate(plus7),
+    returnDate: formatDate(plus14),
+  };
+}
+
 // Curated database of authentic airlines and flight corridors for global hubs
+export function buildFlightBookingUrl(
+  airline: string,
+  flightNumber: string,
+  depAirport: string,
+  arrAirport: string,
+  depDate: string,
+  retDate?: string
+): string {
+  const depCode = depAirport.includes('(') ? depAirport.match(/\(([^)]+)\)/)?.[1] || depAirport : depAirport.split(' ')[0];
+  const arrCode = arrAirport.includes('(') ? arrAirport.match(/\(([^)]+)\)/)?.[1] || arrAirport : arrAirport.split(' ')[0];
+  const query = encodeURIComponent(`flights ${airline} ${flightNumber} ${depCode} to ${arrCode} ${depDate}${retDate ? ` return ${retDate}` : ''}`);
+  return `https://www.google.com/travel/flights?q=${query}`;
+}
+
 interface RoutePreset {
   destAirport: string;
   destCity: string;
@@ -644,6 +677,7 @@ function generateCustomTravelResults(params: TravelSearchParams): { flights: Fli
       cabinClass: params.cabinClass || 'Economy',
       baggage: '2 x 23kg checked bags included',
       aircraft: 'Boeing 787-9 Dreamliner',
+      bookingUrl: buildFlightBookingUrl('Star Alliance', 'SA', origin, city, startDate, returnDate),
       returnFlight: {
         flightNumber: `SA ${Math.floor(100 + Math.random() * 800)}`,
         airline: 'Global Star Alliance Carrier',
@@ -679,6 +713,7 @@ function generateCustomTravelResults(params: TravelSearchParams): { flights: Fli
       cabinClass: params.cabinClass || 'Economy',
       baggage: '1 x 23kg checked bag + carry-on',
       aircraft: 'Airbus A350-900',
+      bookingUrl: buildFlightBookingUrl('SkyTeam', 'ST', origin, city, startDate, returnDate),
       returnFlight: {
         flightNumber: `ST ${Math.floor(100 + Math.random() * 800)}`,
         airline: 'SkyTeam Transatlantic Express',
@@ -714,6 +749,7 @@ function generateCustomTravelResults(params: TravelSearchParams): { flights: Fli
       cabinClass: params.cabinClass || 'Economy',
       baggage: '2 x 23kg checked bags included',
       aircraft: 'Boeing 777-300ER',
+      bookingUrl: buildFlightBookingUrl('Direct Explorer Air', 'EX', origin, city, startDate, returnDate),
       returnFlight: {
         flightNumber: `EX ${Math.floor(100 + Math.random() * 800)}`,
         airline: 'Direct Explorer Air',
@@ -926,6 +962,7 @@ export async function searchFlightsAndHotels(
       cabinClass: params.cabinClass || 'Economy',
       baggage: a.baggage,
       aircraft: a.aircraft,
+      bookingUrl: buildFlightBookingUrl(a.name, a.flightNo, origin || preset.originAirport, preset.destAirport, startDate, returnDate),
       returnFlight: {
         flightNumber: a.retFlightNo,
         airline: a.name,

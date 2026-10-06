@@ -212,6 +212,7 @@ export interface FlightOffer {
   cabinClass: string;
   baggage: string;
   aircraft?: string;
+  bookingUrl?: string;
   returnFlight?: {
     flightNumber: string;
     airline: string;

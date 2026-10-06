@@ -8,11 +8,30 @@ import {
   HotelOffer,
 } from '../types';
 import { useSeason } from '../context/SeasonContext';
-import { searchFlightsAndHotels, calculateNights } from '../services/travelSearchService';
+import {
+  searchFlightsAndHotels,
+  calculateNights,
+  buildFlightBookingUrl,
+  getInitialDates,
+} from '../services/travelSearchService';
 
 interface FlightHotelSearchViewProps {
   activeDestination: DestinationData;
   currency: Currency;
+  travelDestination?: string;
+  travelStartDate?: string;
+  travelReturnDate?: string;
+  travelOrigin?: string;
+  travelPassengers?: number;
+  travelCabinClass?: 'Economy' | 'Premium Economy' | 'Business' | 'First';
+  selectedFlight?: FlightOffer | null;
+  selectedHotel?: HotelOffer | null;
+  onUpdateTravelDestination?: (dest: string) => void;
+  onUpdateTravelDates?: (startDate: string, returnDate: string) => void;
+  onUpdateTravelOrigin?: (origin: string) => void;
+  onUpdateTravelDetails?: (details: { passengers: number; cabinClass: 'Economy' | 'Premium Economy' | 'Business' | 'First' }) => void;
+  onSelectFlight?: (flight: FlightOffer) => void;
+  onSelectHotel?: (hotel: HotelOffer) => void;
   onNavigateToTripIntelligence: (destinationCity: string, startDate: string, returnDate: string) => void;
   onSelectDestinationById?: (id: string) => void;
 }
@@ -28,28 +47,23 @@ const CURRENCY_RATES: Record<Currency, { symbol: string; rate: number }> = {
   MYR: { symbol: 'RM', rate: 4.42 },
 };
 
-// Helper to get default dates: today + 7 days for destination date, today + 14 days for return date
-const getInitialDates = () => {
-  const now = new Date();
-  const plus7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const plus14 = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-
-  const formatDate = (d: Date) => {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  return {
-    destinationDate: formatDate(plus7),
-    returnDate: formatDate(plus14),
-  };
-};
-
 export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
   activeDestination,
   currency,
+  travelDestination,
+  travelStartDate,
+  travelReturnDate,
+  travelOrigin,
+  travelPassengers,
+  travelCabinClass,
+  selectedFlight,
+  selectedHotel,
+  onUpdateTravelDestination,
+  onUpdateTravelDates,
+  onUpdateTravelOrigin,
+  onUpdateTravelDetails,
+  onSelectFlight,
+  onSelectHotel,
   onNavigateToTripIntelligence,
   onSelectDestinationById,
 }) => {
@@ -57,12 +71,14 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
   const initialDates = getInitialDates();
 
   // Search Form State
-  const [destinationInput, setDestinationInput] = useState(`${activeDestination.city}, ${activeDestination.country}`);
-  const [destinationDateInput, setDestinationDateInput] = useState(initialDates.destinationDate);
-  const [returnDateInput, setReturnDateInput] = useState(initialDates.returnDate);
-  const [originInput, setOriginInput] = useState(activeDestination.originCity || 'San Francisco (SFO)');
-  const [passengers, setPassengers] = useState(1);
-  const [cabinClass, setCabinClass] = useState<'Economy' | 'Premium Economy' | 'Business' | 'First'>('Economy');
+  const [destinationInput, setDestinationInput] = useState(
+    travelDestination || (activeDestination?.city ? `${activeDestination.city}, ${activeDestination.country}` : 'Tokyo, Japan')
+  );
+  const [destinationDateInput, setDestinationDateInput] = useState(travelStartDate || initialDates.destinationDate);
+  const [returnDateInput, setReturnDateInput] = useState(travelReturnDate || initialDates.returnDate);
+  const [originInput, setOriginInput] = useState(travelOrigin || activeDestination.originCity || 'San Francisco (SFO)');
+  const [passengers, setPassengers] = useState(travelPassengers || 1);
+  const [cabinClass, setCabinClass] = useState<'Economy' | 'Premium Economy' | 'Business' | 'First'>(travelCabinClass || 'Economy');
 
   // Search Results & Loading
   const [isSearching, setIsSearching] = useState(false);
@@ -72,16 +88,43 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
   const [hotelSort, setHotelSort] = useState<'recommended' | 'price' | 'rating'>('recommended');
 
   // Selected Booking Items
-  const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null);
-  const [selectedHotelId, setSelectedHotelId] = useState<string | null>(null);
+  const [selectedFlightId, setSelectedFlightId] = useState<string | null>(selectedFlight?.id || null);
+  const [selectedHotelId, setSelectedHotelId] = useState<string | null>(selectedHotel?.id || null);
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState<string | null>(null);
 
   // Sync destination if changed from outside
   useEffect(() => {
-    if (activeDestination?.city) {
+    if (travelDestination) {
+      setDestinationInput(travelDestination);
+    } else if (activeDestination?.city) {
       setDestinationInput(`${activeDestination.city}, ${activeDestination.country}`);
     }
-  }, [activeDestination.id]);
+  }, [travelDestination, activeDestination.id]);
+
+  useEffect(() => {
+    if (travelStartDate) setDestinationDateInput(travelStartDate);
+    if (travelReturnDate) setReturnDateInput(travelReturnDate);
+  }, [travelStartDate, travelReturnDate]);
+
+  useEffect(() => {
+    if (travelOrigin) setOriginInput(travelOrigin);
+  }, [travelOrigin]);
+
+  useEffect(() => {
+    if (travelPassengers) setPassengers(travelPassengers);
+  }, [travelPassengers]);
+
+  useEffect(() => {
+    if (travelCabinClass) setCabinClass(travelCabinClass);
+  }, [travelCabinClass]);
+
+  useEffect(() => {
+    if (selectedFlight?.id) setSelectedFlightId(selectedFlight.id);
+  }, [selectedFlight?.id]);
+
+  useEffect(() => {
+    if (selectedHotel?.id) setSelectedHotelId(selectedHotel.id);
+  }, [selectedHotel?.id]);
 
   // Initial auto-search on mount
   useEffect(() => {
@@ -115,11 +158,19 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
       const res = await searchFlightsAndHotels(searchParams);
       setResults(res);
 
-      if (res.flights.length > 0 && !selectedFlightId) {
-        setSelectedFlightId(res.flights[0].id);
+      if (res.flights.length > 0) {
+        const initialFl = res.flights[0];
+        if (!selectedFlightId) {
+          setSelectedFlightId(initialFl.id);
+          if (onSelectFlight) onSelectFlight(initialFl);
+        }
       }
-      if (res.hotels.length > 0 && !selectedHotelId) {
-        setSelectedHotelId(res.hotels[0].id);
+      if (res.hotels.length > 0) {
+        const initialHt = res.hotels[0];
+        if (!selectedHotelId) {
+          setSelectedHotelId(initialHt.id);
+          if (onSelectHotel) onSelectHotel(initialHt);
+        }
       }
     } catch (err) {
       console.error('Error during flight and hotel search:', err);
@@ -140,6 +191,7 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
 
   const handleSelectCorridor = (corridor: { label: string; flag: string; id: string }) => {
     setDestinationInput(corridor.label);
+    if (onUpdateTravelDestination) onUpdateTravelDestination(corridor.label);
     if (onSelectDestinationById) {
       onSelectDestinationById(corridor.id);
     }
@@ -160,9 +212,9 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
     return b.stars - a.stars;
   }) : [];
 
-  const selectedFlight = results?.flights.find(f => f.id === selectedFlightId);
-  const selectedHotel = results?.hotels.find(h => h.id === selectedHotelId);
-  const totalCombinedPriceUsd = (selectedFlight?.priceUsd || 0) + (selectedHotel ? selectedHotel.pricePerNightUsd * nightsCount : 0);
+  const activeSelectedFlight = results?.flights.find(f => f.id === selectedFlightId) || selectedFlight;
+  const activeSelectedHotel = results?.hotels.find(h => h.id === selectedHotelId) || selectedHotel;
+  const totalCombinedPriceUsd = (activeSelectedFlight?.priceUsd || 0) + (activeSelectedHotel ? activeSelectedHotel.pricePerNightUsd * nightsCount : 0);
 
   return (
     <div className="space-y-6">
@@ -192,12 +244,12 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
           onClick={() => onNavigateToTripIntelligence(destinationInput, destinationDateInput, returnDateInput)}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-[#0c1e34] bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-all shrink-0"
         >
-          <span>Trip Intelligence & Advisory</span>
+          <span>Travel Advisory</span>
           <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
         </button>
       </div>
 
-      {/* Primary Section Switcher Tabs: Search Flights and Hotels | Trip Intelligence & Advisory */}
+      {/* Primary Section Switcher Tabs: Search Flights and Hotels | Travel Advisory */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-1.5 bg-white/95 backdrop-blur rounded-2xl border border-[#dce9ff] shadow-xs">
         <button
           type="button"
@@ -211,10 +263,10 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
           type="button"
           onClick={() => onNavigateToTripIntelligence(destinationInput, destinationDateInput, returnDateInput)}
           className="flex-1 py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2.5 transition-all bg-white text-[#44474d] hover:bg-[#eff4ff] hover:text-[#0b1c30] border border-slate-200 hover:border-slate-300 shadow-2xs group"
-          title="Switch to Trip Intelligence & Advisory section"
+          title="Switch to Travel Advisory section"
         >
           <span className="material-symbols-outlined text-[18px]">map</span>
-          <span>🌐 Trip Intelligence & Advisory Section</span>
+          <span>🌐 Travel Advisory</span>
           <span className="material-symbols-outlined text-[14px] text-slate-400">arrow_forward</span>
         </button>
       </div>
@@ -275,7 +327,11 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
                 <input
                   type="text"
                   value={destinationInput}
-                  onChange={(e) => setDestinationInput(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setDestinationInput(val);
+                    if (onUpdateTravelDestination) onUpdateTravelDestination(val);
+                  }}
                   placeholder="e.g. Tokyo, Japan or Paris, France"
                   className="w-full h-11 pl-9 pr-3 rounded-xl bg-white text-xs font-semibold text-[#0b1c30] border border-[#dce9ff] focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 shadow-2xs"
                   required
@@ -296,7 +352,11 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
                 <input
                   type="date"
                   value={destinationDateInput}
-                  onChange={(e) => setDestinationDateInput(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setDestinationDateInput(val);
+                    if (onUpdateTravelDates) onUpdateTravelDates(val, returnDateInput);
+                  }}
                   className="w-full h-11 px-3 rounded-xl bg-white text-xs font-semibold text-[#0b1c30] border border-[#dce9ff] focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 shadow-2xs"
                   required
                 />
@@ -313,7 +373,11 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
                 <input
                   type="date"
                   value={returnDateInput}
-                  onChange={(e) => setReturnDateInput(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setReturnDateInput(val);
+                    if (onUpdateTravelDates) onUpdateTravelDates(destinationDateInput, val);
+                  }}
                   className="w-full h-11 px-3 rounded-xl bg-white text-xs font-semibold text-[#0b1c30] border border-[#dce9ff] focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 shadow-2xs"
                   required
                 />
@@ -351,7 +415,11 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
               <input
                 type="text"
                 value={originInput}
-                onChange={(e) => setOriginInput(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setOriginInput(val);
+                  if (onUpdateTravelOrigin) onUpdateTravelOrigin(val);
+                }}
                 placeholder="Origin City / Airport (e.g. SFO)"
                 className="w-full h-8 px-2.5 rounded-lg bg-white text-xs text-[#0b1c30] border border-[#dce9ff]"
               />
@@ -361,7 +429,11 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
               <span className="text-[11px] font-semibold text-[#74777e] shrink-0">Cabin Class:</span>
               <select
                 value={cabinClass}
-                onChange={(e) => setCabinClass(e.target.value as any)}
+                onChange={(e) => {
+                  const val = e.target.value as any;
+                  setCabinClass(val);
+                  if (onUpdateTravelDetails) onUpdateTravelDetails({ passengers, cabinClass: val });
+                }}
                 className="w-full h-8 px-2 rounded-lg bg-white text-xs text-[#0b1c30] border border-[#dce9ff]"
               >
                 <option value="Economy">Economy</option>
@@ -375,7 +447,11 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
               <span className="text-[11px] font-semibold text-[#74777e] shrink-0">Travelers:</span>
               <select
                 value={passengers}
-                onChange={(e) => setPassengers(Number(e.target.value))}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setPassengers(val);
+                  if (onUpdateTravelDetails) onUpdateTravelDetails({ passengers: val, cabinClass });
+                }}
                 className="w-full h-8 px-2 rounded-lg bg-white text-xs text-[#0b1c30] border border-[#dce9ff]"
               >
                 <option value={1}>1 Traveler</option>
@@ -507,6 +583,20 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
               <div className="grid grid-cols-1 gap-4">
                 {sortedFlights.map((flight) => {
                   const isSelected = selectedFlightId === flight.id;
+                  const bookingUrl =
+                    flight.bookingUrl ||
+                    (flight as any).bookingLink ||
+                    (flight as any).url ||
+                    (flight as any).link ||
+                    buildFlightBookingUrl(
+                      flight.airline,
+                      flight.flightNumber,
+                      flight.departureAirport || originInput,
+                      flight.arrivalAirport || destinationInput,
+                      flight.departureDate || destinationDateInput,
+                      flight.returnFlight?.departureDate || returnDateInput
+                    );
+
                   return (
                     <div
                       key={flight.id}
@@ -622,23 +712,33 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
                             <span className="text-[11px] text-emerald-700 font-semibold block">Taxes & fees included</span>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedFlightId(flight.id);
-                              setBookingSuccessMsg(`Flight ${flight.flightNumber} selected!`);
-                            }}
-                            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                              isSelected
-                                ? 'bg-[#0c1e34] text-white shadow-xs'
-                                : 'bg-slate-100 text-[#0c1e34] hover:bg-slate-200'
-                            }`}
-                          >
-                            <span className="material-symbols-outlined text-[16px]">
-                              {isSelected ? 'check_circle' : 'add_circle'}
+                          <div className="flex flex-col items-stretch lg:items-end gap-1.5 w-full sm:w-auto">
+                            <a
+                              href={bookingUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => {
+                                setSelectedFlightId(flight.id);
+                                if (onSelectFlight) onSelectFlight(flight);
+                                setBookingSuccessMsg(`Flight ${flight.flightNumber} selected!`);
+                              }}
+                              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs ${
+                                isSelected
+                                  ? 'bg-[#0c1e34] text-white shadow-xs ring-2 ring-emerald-500/50'
+                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              }`}
+                              title="Link to booking on MCP gateway"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">
+                                {isSelected ? 'check_circle' : 'open_in_new'}
+                              </span>
+                              <span>{isSelected ? 'Flight Selected ↗' : 'Select Flights ↗'}</span>
+                            </a>
+                            <span className="text-[10px] text-emerald-700 font-mono flex items-center gap-1 justify-center lg:justify-end">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              MCP Booking Link
                             </span>
-                            <span>{isSelected ? 'Selected Flight' : 'Select Flight'}</span>
-                          </button>
+                          </div>
                         </div>
 
                       </div>
@@ -770,6 +870,7 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
                           type="button"
                           onClick={() => {
                             setSelectedHotelId(hotel.id);
+                            if (onSelectHotel) onSelectHotel(hotel);
                             setBookingSuccessMsg(`Hotel ${hotel.name} selected!`);
                           }}
                           className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
@@ -811,11 +912,11 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
                 </div>
                 <div className="text-xs text-[#a0b3cf] mt-0.5 flex flex-wrap items-center gap-2">
                   <span>
-                    Flight: <strong className="text-white">{selectedFlight ? `${selectedFlight.airline} (${selectedFlight.flightNumber})` : 'None chosen'}</strong>
+                    Flight: <strong className="text-white">{activeSelectedFlight ? `${activeSelectedFlight.airline} (${activeSelectedFlight.flightNumber})` : 'None chosen'}</strong>
                   </span>
                   <span>•</span>
                   <span>
-                    Hotel: <strong className="text-white">{selectedHotel ? `${selectedHotel.name} (${nightsCount}n)` : 'None chosen'}</strong>
+                    Hotel: <strong className="text-white">{activeSelectedHotel ? `${activeSelectedHotel.name} (${nightsCount}n)` : 'None chosen'}</strong>
                   </span>
                   <span>•</span>
                   <span>
@@ -831,7 +932,7 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
                 onClick={() => onNavigateToTripIntelligence(destinationInput, destinationDateInput, returnDateInput)}
                 className="w-full md:w-auto px-5 py-2.5 rounded-xl font-bold text-xs bg-emerald-500 hover:bg-emerald-400 text-[#0c1e34] transition-all flex items-center justify-center gap-2 shadow-xs"
               >
-                <span>Proceed to Trip Intelligence & Advisory</span>
+                <span>Proceed to Travel Advisory</span>
                 <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
               </button>
             </div>

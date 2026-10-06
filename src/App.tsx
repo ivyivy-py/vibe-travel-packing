@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppView, Currency, TempUnit, TripSummary, AppNotification, DestinationData, Season } from './types';
+import { AppView, Currency, TempUnit, TripSummary, AppNotification, DestinationData, Season, FlightOffer, HotelOffer } from './types';
 import { DESTINATIONS, INITIAL_SAVED_TRIPS, INITIAL_NOTIFICATIONS } from './data/mockData';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -14,8 +14,10 @@ import { NewTripModal } from './components/NewTripModal';
 import { SeasonProvider, useSeason } from './context/SeasonContext';
 import { detectSeason, SEASON_THEMES } from './utils/seasonTheme';
 import { lookupDestinationIntelligence, getPassportConsularAdvisory } from './services/destinationService';
+import { getInitialDates } from './services/travelSearchService';
 
 function AppContent() {
+  const initialDates = getInitialDates();
   const [currentView, setCurrentView] = useState<AppView>('trip-planner');
   const [activeDestId, setActiveDestId] = useState<string>('tokyo');
   const [allDestinations, setAllDestinations] = useState<Record<string, DestinationData>>(DESTINATIONS);
@@ -25,6 +27,16 @@ function AppContent() {
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
   const [isNewTripModalOpen, setIsNewTripModalOpen] = useState(false);
 
+  // Shared travel values carried between "Flight & Hotel Search Engine" and "Travel Advisory" tabs
+  const [sharedDestination, setSharedDestination] = useState<string>('Tokyo, Japan');
+  const [sharedStartDate, setSharedStartDate] = useState<string>(initialDates.destinationDate);
+  const [sharedReturnDate, setSharedReturnDate] = useState<string>(initialDates.returnDate);
+  const [sharedOrigin, setSharedOrigin] = useState<string>('San Francisco (SFO)');
+  const [sharedPassengers, setSharedPassengers] = useState<number>(1);
+  const [sharedCabinClass, setSharedCabinClass] = useState<'Economy' | 'Premium Economy' | 'Business' | 'First'>('Economy');
+  const [selectedFlight, setSelectedFlight] = useState<FlightOffer | null>(null);
+  const [selectedHotel, setSelectedHotel] = useState<HotelOffer | null>(null);
+
   const { season, theme, setSeason } = useSeason();
 
   const activeDestination = allDestinations[activeDestId] || allDestinations.tokyo || DESTINATIONS.tokyo;
@@ -33,6 +45,7 @@ function AppContent() {
     if (allDestinations[destId]) {
       setActiveDestId(destId);
       const d = allDestinations[destId];
+      setSharedDestination(`${d.city}, ${d.country}`);
       const detected = d.season || detectSeason(d.travelDates, d.country, d.city, d.typicalClimateTempC);
       setSeason(detected);
     }
@@ -113,6 +126,9 @@ function AppContent() {
 
       // Set active
       setActiveDestId(result.id);
+      setSharedDestination(result.city ? `${result.city}, ${result.country}` : params.location);
+      if (params.startDate) setSharedStartDate(params.startDate);
+      if (params.endDate) setSharedReturnDate(params.endDate);
 
       // Reflect seasonal theme
       if (result.season) {
@@ -182,7 +198,38 @@ function AppContent() {
           <FlightHotelSearchView
             activeDestination={activeDestination}
             currency={currency}
+            travelDestination={sharedDestination}
+            travelStartDate={sharedStartDate}
+            travelReturnDate={sharedReturnDate}
+            travelOrigin={sharedOrigin}
+            travelPassengers={sharedPassengers}
+            travelCabinClass={sharedCabinClass}
+            selectedFlight={selectedFlight}
+            selectedHotel={selectedHotel}
+            onUpdateTravelDestination={(dest) => {
+              setSharedDestination(dest);
+            }}
+            onUpdateTravelDates={(sDate, rDate) => {
+              setSharedStartDate(sDate);
+              setSharedReturnDate(rDate);
+            }}
+            onUpdateTravelOrigin={(orig) => {
+              setSharedOrigin(orig);
+            }}
+            onUpdateTravelDetails={({ passengers, cabinClass }) => {
+              setSharedPassengers(passengers);
+              setSharedCabinClass(cabinClass);
+            }}
+            onSelectFlight={(flight) => {
+              setSelectedFlight(flight);
+            }}
+            onSelectHotel={(hotel) => {
+              setSelectedHotel(hotel);
+            }}
             onNavigateToTripIntelligence={(destCity, startD, endD) => {
+              setSharedDestination(destCity);
+              setSharedStartDate(startD);
+              setSharedReturnDate(endD);
               handleLookupDestination({
                 location: destCity,
                 startDate: startD,
@@ -204,6 +251,18 @@ function AppContent() {
             tempUnit={tempUnit}
             onLookupDestination={handleLookupDestination}
             onSeasonChange={setSeason}
+            travelDestination={sharedDestination}
+            travelStartDate={sharedStartDate}
+            travelReturnDate={sharedReturnDate}
+            travelOrigin={sharedOrigin}
+            selectedFlight={selectedFlight}
+            selectedHotel={selectedHotel}
+            onUpdateTravelValues={({ destination, startDate, returnDate, origin }) => {
+              if (destination) setSharedDestination(destination);
+              if (startDate) setSharedStartDate(startDate);
+              if (returnDate) setSharedReturnDate(returnDate);
+              if (origin) setSharedOrigin(origin);
+            }}
           />
         )}
 

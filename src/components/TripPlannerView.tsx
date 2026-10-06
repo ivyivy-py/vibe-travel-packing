@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { DestinationData, PlannerSubTab, AppView, Currency, TempUnit, Season } from '../types';
+import { DestinationData, PlannerSubTab, AppView, Currency, TempUnit, Season, FlightOffer, HotelOffer } from '../types';
 import { useSeason } from '../context/SeasonContext';
+import { getInitialDates, buildFlightBookingUrl } from '../services/travelSearchService';
 
 interface TripPlannerViewProps {
   destination: DestinationData;
@@ -16,6 +17,19 @@ interface TripPlannerViewProps {
     passportNationality?: string;
   }) => Promise<void>;
   onSeasonChange: (season: Season) => void;
+  // Carried values from Flight & Hotel Search Engine
+  travelDestination?: string;
+  travelStartDate?: string;
+  travelReturnDate?: string;
+  travelOrigin?: string;
+  selectedFlight?: FlightOffer | null;
+  selectedHotel?: HotelOffer | null;
+  onUpdateTravelValues?: (values: {
+    destination?: string;
+    startDate?: string;
+    returnDate?: string;
+    origin?: string;
+  }) => void;
 }
 
 export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
@@ -27,16 +41,30 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
   tempUnit,
   onLookupDestination,
   onSeasonChange,
+  travelDestination,
+  travelStartDate,
+  travelReturnDate,
+  travelOrigin,
+  selectedFlight,
+  selectedHotel,
+  onUpdateTravelValues,
 }) => {
   const { season, theme } = useSeason();
+  const initialDates = getInitialDates();
   const [activeSubTab, setActiveSubTab] = useState<PlannerSubTab>('comprehensive');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLookingUp, setIsLookingUp] = useState(false);
 
-  // User input states for Dates & Location
-  const [locationInput, setLocationInput] = useState(`${destination.city}, ${destination.country}`);
-  const [startDateInput, setStartDateInput] = useState('2026-07-15');
-  const [endDateInput, setEndDateInput] = useState('2026-07-29');
+  // User input states for Dates & Location - carried from Search Engine
+  const [locationInput, setLocationInput] = useState(
+    travelDestination || `${destination.city}, ${destination.country}`
+  );
+  const [startDateInput, setStartDateInput] = useState(
+    travelStartDate || initialDates.destinationDate
+  );
+  const [endDateInput, setEndDateInput] = useState(
+    travelReturnDate || initialDates.returnDate
+  );
   const [passportInput, setPassportInput] = useState(destination.passportNationality || 'United States');
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
 
@@ -47,11 +75,24 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
     p3: true,
   });
 
-  // Sync inputs when destination changes
+  // Sync inputs when destination or carried values change
   useEffect(() => {
-    setLocationInput(`${destination.city}, ${destination.country}`);
+    if (travelDestination) {
+      setLocationInput(travelDestination);
+    } else {
+      setLocationInput(`${destination.city}, ${destination.country}`);
+    }
     setPassportInput(destination.passportNationality || 'United States');
-  }, [destination.id]);
+  }, [destination.id, travelDestination]);
+
+  useEffect(() => {
+    if (travelStartDate) {
+      setStartDateInput(travelStartDate);
+    }
+    if (travelReturnDate) {
+      setEndDateInput(travelReturnDate);
+    }
+  }, [travelStartDate, travelReturnDate]);
 
   const toggleCheck = (id: string) => {
     setChecklistState(prev => ({ ...prev, [id]: !prev[id] }));
@@ -78,6 +119,13 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
 
     setIsLookingUp(true);
     setShowLocationDropdown(false);
+    if (onUpdateTravelValues) {
+      onUpdateTravelValues({
+        destination: locationInput.trim(),
+        startDate: startDateInput,
+        returnDate: endDateInput,
+      });
+    }
     try {
       await onLookupDestination({
         location: locationInput.trim(),
@@ -180,7 +228,7 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
         </div>
       </div>
 
-      {/* Primary Section Switcher Tabs: Search Flights and Hotels | Trip Intelligence & Advisory */}
+      {/* Primary Section Switcher Tabs: Search Flights and Hotels | Travel Advisory */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-1.5 bg-white/95 backdrop-blur rounded-2xl border border-[#dce9ff] shadow-xs">
         <button
           type="button"
@@ -198,9 +246,133 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
           className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${theme.activeTab} shadow-xs border border-transparent`}
         >
           <span className="material-symbols-outlined text-[18px]">map</span>
-          <span>🌐 Trip Intelligence & Advisory Section</span>
+          <span>🌐 Travel Advisory</span>
         </button>
       </div>
+
+      {/* Synchronized Travel Package Carried from Flight & Hotel Search Engine */}
+      {(selectedFlight || selectedHotel || travelDestination) && (
+        <div className="bg-gradient-to-r from-[#0c1e34] via-[#11243d] to-[#1a3356] rounded-3xl p-5 md:p-6 text-white shadow-md border border-[#233854]">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+            <div className="space-y-2 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Carried from Flight & Hotel Search
+                </span>
+                <span className="text-xs font-mono text-slate-300 bg-white/10 px-2.5 py-0.5 rounded-md">
+                  📅 {startDateInput} ➔ {endDateInput}
+                </span>
+                <span className="text-xs font-mono text-emerald-300 bg-emerald-950/60 border border-emerald-700/50 px-2 py-0.5 rounded-md">
+                  📍 {locationInput}
+                </span>
+              </div>
+              <h3 className="font-['Plus_Jakarta_Sans'] text-base md:text-lg font-bold text-white flex items-center gap-2">
+                <span>Synchronized Travel Package</span>
+                <span className="text-xs font-normal text-slate-300 font-mono">
+                  (Departing: {travelOrigin || destination.originAirport})
+                </span>
+              </h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {/* Flight detail */}
+                <div className="bg-white/10 rounded-xl p-3 border border-white/10 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xl">✈️</span>
+                    <div>
+                      <div className="text-[11px] text-emerald-300 font-semibold uppercase tracking-wider">Flight Reservation</div>
+                      <div className="text-xs font-bold text-white">
+                        {selectedFlight ? `${selectedFlight.airline} (${selectedFlight.flightNumber})` : `Corridor #${destination.airportCode}`}
+                      </div>
+                      <div className="text-[10px] text-slate-300">
+                        {selectedFlight ? `${selectedFlight.departureAirport} ➔ ${selectedFlight.arrivalAirport} • ${selectedFlight.departureTime}` : `${travelOrigin || destination.originAirport} ➔ ${destination.city}`}
+                      </div>
+                    </div>
+                  </div>
+                  {selectedFlight && (
+                    <div className="text-right shrink-0">
+                      <div className="text-xs font-bold font-mono text-emerald-300">${selectedFlight.priceUsd}</div>
+                      <a
+                        href={
+                          selectedFlight.bookingUrl ||
+                          buildFlightBookingUrl(
+                            selectedFlight.airline,
+                            selectedFlight.flightNumber,
+                            selectedFlight.departureAirport,
+                            selectedFlight.arrivalAirport,
+                            startDateInput,
+                            endDateInput
+                          )
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-0.5 text-[10px] text-emerald-400 hover:text-emerald-300 underline font-semibold mt-0.5"
+                        title="Book flight on MCP provider gateway"
+                      >
+                        MCP Link ↗
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Hotel detail */}
+                <div className="bg-white/10 rounded-xl p-3 border border-white/10 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xl">🏨</span>
+                    <div>
+                      <div className="text-[11px] text-amber-300 font-semibold uppercase tracking-wider">Accommodation</div>
+                      <div className="text-xs font-bold text-white">
+                        {selectedHotel ? selectedHotel.name : `Accommodations in ${destination.city}`}
+                      </div>
+                      <div className="text-[10px] text-slate-300">
+                        {selectedHotel ? `${selectedHotel.roomType} • ${selectedHotel.neighborhood}` : `${startDateInput} - ${endDateInput}`}
+                      </div>
+                    </div>
+                  </div>
+                  {selectedHotel && (
+                    <div className="text-right shrink-0">
+                      <div className="text-xs font-bold font-mono text-amber-300">${selectedHotel.pricePerNightUsd}/nt</div>
+                      <span className="text-[10px] text-slate-300 block">{selectedHotel.ratingScore}★ Rating</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-row lg:flex-col items-stretch gap-2 shrink-0">
+              {selectedFlight && (
+                <a
+                  href={
+                    selectedFlight.bookingUrl ||
+                    buildFlightBookingUrl(
+                      selectedFlight.airline,
+                      selectedFlight.flightNumber,
+                      selectedFlight.departureAirport,
+                      selectedFlight.arrivalAirport,
+                      startDateInput,
+                      endDateInput
+                    )
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-[#0c1e34] transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[15px]">open_in_new</span>
+                  <span>Book Flight via MCP ↗</span>
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => onNavigateToView('flight-hotel-search')}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white transition-all flex items-center justify-center gap-1.5 border border-white/20"
+              >
+                <span className="material-symbols-outlined text-[15px]">tune</span>
+                <span>Change in Flights & Hotels</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Dynamic Consular Telemetry Header & Interactive Query Matrix */}
       <div className={`bg-white rounded-3xl p-6 md:p-8 shadow-xs border transition-all duration-300 ${theme.cardBorder}`}>
@@ -272,7 +444,11 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
                 <input
                   type="text"
                   value={locationInput}
-                  onChange={(e) => setLocationInput(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setLocationInput(val);
+                    if (onUpdateTravelValues) onUpdateTravelValues({ destination: val });
+                  }}
                   onFocus={() => setShowLocationDropdown(true)}
                   placeholder="e.g. Paris, France or Sydney"
                   className="w-full h-11 pl-9 pr-3 rounded-xl bg-white text-xs font-semibold text-[#0b1c30] border border-[#dce9ff] focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 shadow-2xs"
@@ -322,14 +498,22 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
                 <input
                   type="date"
                   value={startDateInput}
-                  onChange={(e) => setStartDateInput(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setStartDateInput(val);
+                    if (onUpdateTravelValues) onUpdateTravelValues({ startDate: val });
+                  }}
                   className="w-full h-11 px-2.5 rounded-xl bg-white text-xs font-semibold text-[#0b1c30] border border-[#dce9ff] focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 shadow-2xs"
                   title="Departure Date"
                 />
                 <input
                   type="date"
                   value={endDateInput}
-                  onChange={(e) => setEndDateInput(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEndDateInput(val);
+                    if (onUpdateTravelValues) onUpdateTravelValues({ returnDate: val });
+                  }}
                   className="w-full h-11 px-2.5 rounded-xl bg-white text-xs font-semibold text-[#0b1c30] border border-[#dce9ff] focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 shadow-2xs"
                   title="Return Date"
                 />
