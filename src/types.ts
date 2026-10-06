@@ -1,4 +1,5 @@
 export type AppView = 
+  | 'flight-hotel-search'
   | 'trip-planner' 
   | 'visa-checker' 
   | 'packing-weather' 
@@ -177,3 +178,86 @@ export interface AppNotification {
   read: boolean;
   actionView?: AppView;
 }
+
+export interface TravelSearchParams {
+  destination: string;
+  startDate: string;        // Travel start date
+  returnDate: string;       // Return date
+  destinationDate: string;  // Destination date (arrival / check-in date)
+  origin?: string;
+  passengers?: number;
+  cabinClass?: 'Economy' | 'Premium Economy' | 'Business' | 'First';
+  hotelGuests?: number;
+  hotelRooms?: number;
+}
+
+export interface FlightOffer {
+  id: string;
+  airline: string;
+  airlineCode: string;
+  airlineLogo?: string;
+  flightNumber: string;
+  departureAirport: string;
+  departureCity: string;
+  departureTime: string;
+  departureDate: string;
+  arrivalAirport: string;
+  arrivalCity: string;
+  arrivalTime: string;
+  arrivalDate: string; // Destination date
+  duration: string;
+  stops: number;
+  stopDetails?: string;
+  priceUsd: number;
+  cabinClass: string;
+  baggage: string;
+  aircraft?: string;
+  returnFlight?: {
+    flightNumber: string;
+    airline: string;
+    airlineCode: string;
+    departureAirport: string;
+    departureTime: string;
+    departureDate: string;
+    arrivalAirport: string;
+    arrivalTime: string;
+    arrivalDate: string;
+    duration: string;
+    stops: number;
+    stopDetails?: string;
+  };
+}
+
+export interface HotelOffer {
+  id: string;
+  name: string;
+  city: string;
+  neighborhood: string;
+  stars: number;
+  ratingScore: number;
+  reviewCount: number;
+  ratingText: string;
+  pricePerNightUsd: number;
+  totalPriceUsd: number;
+  checkInDate: string;  // Destination date
+  checkOutDate: string; // Return date
+  nights: number;
+  roomType: string;
+  image: string;
+  amenities: string[];
+  distanceToCenter: string;
+  freeCancellation: boolean;
+  breakfastIncluded: boolean;
+  bookingUrl?: string;
+}
+
+export interface TravelSearchResults {
+  source: string;
+  endpointUrl: string;
+  endpointStatus: 'live' | 'connected' | 'fallback';
+  query: TravelSearchParams;
+  totalNights: number;
+  flights: FlightOffer[];
+  hotels: HotelOffer[];
+}
+

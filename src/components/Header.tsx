@@ -40,6 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const navItems: { id: AppView; label: string; icon: string }[] = [
+    { id: 'flight-hotel-search', label: 'Flights & Hotels', icon: 'travel_explore' },
     { id: 'trip-planner', label: 'Trip Planner', icon: 'map' },
     { id: 'visa-checker', label: 'Visa Checker', icon: 'verified_user' },
     { id: 'packing-weather', label: 'Packing & Weather', icon: 'luggage' },

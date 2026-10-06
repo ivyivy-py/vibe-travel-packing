@@ -180,6 +180,28 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
         </div>
       </div>
 
+      {/* Primary Section Switcher Tabs: Search Flights & Hotels (MCP) | Trip Intelligence & Advisory */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-1.5 bg-white/95 backdrop-blur rounded-2xl border border-[#dce9ff] shadow-xs">
+        <button
+          type="button"
+          onClick={() => onNavigateToView('flight-hotel-search')}
+          className="flex-1 py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2.5 transition-all bg-white text-[#44474d] hover:bg-[#eff4ff] hover:text-[#0b1c30] border border-slate-200 hover:border-slate-300 shadow-2xs group"
+          title="Search Flights and Hotels with live MCP endpoint https://mcp.smithery.ai/ivy-poon"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span className="material-symbols-outlined text-[18px] text-blue-600 group-hover:scale-110 transition-transform">travel_explore</span>
+          <span>✈️ Search Flights & Hotels (https://mcp.smithery.ai/ivy-poon)</span>
+          <span className="material-symbols-outlined text-[14px] text-slate-400">arrow_forward</span>
+        </button>
+        <button
+          type="button"
+          className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${theme.activeTab} shadow-xs border border-transparent`}
+        >
+          <span className="material-symbols-outlined text-[18px]">map</span>
+          <span>🌐 Trip Intelligence & Advisory Section</span>
+        </button>
+      </div>
+
       {/* Dynamic Consular Telemetry Header & Interactive Query Matrix */}
       <div className={`bg-white rounded-3xl p-6 md:p-8 shadow-xs border transition-all duration-300 ${theme.cardBorder}`}>
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">

@@ -43,6 +43,11 @@ export const Footer: React.FC<FooterProps> = ({ onSelectView }) => {
             <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-3">Intelligence Suite</h4>
             <ul className="space-y-2 text-xs text-[#7686a1]">
               <li>
+                <button onClick={() => onSelectView('flight-hotel-search')} className="hover:text-white transition-colors flex items-center gap-1 text-emerald-400">
+                  <span>✈️ Flight & Hotel Search (MCP)</span>
+                </button>
+              </li>
+              <li>
                 <button onClick={() => onSelectView('trip-planner')} className="hover:text-white transition-colors">
                   Consular Briefing Matrix
                 </button>

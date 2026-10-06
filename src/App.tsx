@@ -9,6 +9,7 @@ import { PackingWeatherView } from './components/PackingWeatherView';
 import { DestinationEventsView } from './components/DestinationEventsView';
 import { SavedTripsView } from './components/SavedTripsView';
 import { TalkToUsView } from './components/TalkToUsView';
+import { FlightHotelSearchView } from './components/FlightHotelSearchView';
 import { NewTripModal } from './components/NewTripModal';
 import { SeasonProvider, useSeason } from './context/SeasonContext';
 import { detectSeason, SEASON_THEMES } from './utils/seasonTheme';
@@ -177,6 +178,22 @@ function AppContent() {
 
       {/* Main Screen Content */}
       <main className="flex-1 max-w-[1280px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+        {currentView === 'flight-hotel-search' && (
+          <FlightHotelSearchView
+            activeDestination={activeDestination}
+            currency={currency}
+            onNavigateToTripIntelligence={(destCity, startD, endD) => {
+              handleLookupDestination({
+                location: destCity,
+                startDate: startD,
+                endDate: endD,
+              });
+              setCurrentView('trip-planner');
+            }}
+            onSelectDestinationById={handleSelectDestination}
+          />
+        )}
+
         {currentView === 'trip-planner' && (
           <TripPlannerView
             destination={activeDestination}
