@@ -28,6 +28,25 @@ const CURRENCY_RATES: Record<Currency, { symbol: string; rate: number }> = {
   MYR: { symbol: 'RM', rate: 4.42 },
 };
 
+// Helper to get default dates: today + 7 days for destination date, today + 14 days for return date
+const getInitialDates = () => {
+  const now = new Date();
+  const plus7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const plus14 = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+  const formatDate = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  return {
+    destinationDate: formatDate(plus7),
+    returnDate: formatDate(plus14),
+  };
+};
+
 export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
   activeDestination,
   currency,
@@ -35,12 +54,12 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
   onSelectDestinationById,
 }) => {
   const { theme } = useSeason();
+  const initialDates = getInitialDates();
 
   // Search Form State
   const [destinationInput, setDestinationInput] = useState(`${activeDestination.city}, ${activeDestination.country}`);
-  const [startDateInput, setStartDateInput] = useState('2026-07-15');
-  const [destinationDateInput, setDestinationDateInput] = useState('2026-07-16');
-  const [returnDateInput, setReturnDateInput] = useState('2026-07-29');
+  const [destinationDateInput, setDestinationDateInput] = useState(initialDates.destinationDate);
+  const [returnDateInput, setReturnDateInput] = useState(initialDates.returnDate);
   const [originInput, setOriginInput] = useState(activeDestination.originCity || 'San Francisco (SFO)');
   const [passengers, setPassengers] = useState(1);
   const [cabinClass, setCabinClass] = useState<'Economy' | 'Premium Economy' | 'Business' | 'First'>('Economy');
@@ -85,9 +104,9 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
     try {
       const searchParams: TravelSearchParams = {
         destination: destinationInput.trim(),
-        startDate: startDateInput,
+        startDate: destinationDateInput,
         returnDate: returnDateInput,
-        destinationDate: destinationDateInput || startDateInput,
+        destinationDate: destinationDateInput,
         origin: originInput.trim(),
         passengers,
         cabinClass,
@@ -126,7 +145,7 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
     }
   };
 
-  const nightsCount = calculateNights(destinationDateInput, returnDateInput, startDateInput);
+  const nightsCount = calculateNights(destinationDateInput, returnDateInput, destinationDateInput);
 
   // Sorting
   const sortedFlights = results ? [...results.flights].sort((a, b) => {
@@ -157,10 +176,10 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
-                MCP Search Active
+                Live Search Active
               </span>
               <span className="text-xs font-semibold text-[#0b1c30]">
-                Live Endpoint: <code className="font-mono text-[11px] bg-white/70 px-1.5 py-0.5 rounded border border-black/5">https://mcp.smithery.ai/ivy-poon</code>
+                Real-Time Airline & Hotel Availability
               </span>
             </div>
             <p className="text-xs mt-0.5 font-medium text-[#44474d]">
@@ -170,7 +189,7 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
         </div>
 
         <button
-          onClick={() => onNavigateToTripIntelligence(destinationInput, startDateInput, returnDateInput)}
+          onClick={() => onNavigateToTripIntelligence(destinationInput, destinationDateInput, returnDateInput)}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-[#0c1e34] bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-all shrink-0"
         >
           <span>Trip Intelligence & Advisory</span>
@@ -178,7 +197,7 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
         </button>
       </div>
 
-      {/* Primary Section Switcher Tabs: Search Flights & Hotels (MCP) | Trip Intelligence & Advisory */}
+      {/* Primary Section Switcher Tabs: Search Flights and Hotels | Trip Intelligence & Advisory */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-1.5 bg-white/95 backdrop-blur rounded-2xl border border-[#dce9ff] shadow-xs">
         <button
           type="button"
@@ -186,11 +205,11 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
         >
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span className="material-symbols-outlined text-[18px] text-[#97f5ca]">travel_explore</span>
-          <span>✈️ Search Flights & Hotels (https://mcp.smithery.ai/ivy-poon)</span>
+          <span>✈️ Search Flights and Hotels</span>
         </button>
         <button
           type="button"
-          onClick={() => onNavigateToTripIntelligence(destinationInput, startDateInput, returnDateInput)}
+          onClick={() => onNavigateToTripIntelligence(destinationInput, destinationDateInput, returnDateInput)}
           className="flex-1 py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2.5 transition-all bg-white text-[#44474d] hover:bg-[#eff4ff] hover:text-[#0b1c30] border border-slate-200 hover:border-slate-300 shadow-2xs group"
           title="Switch to Trip Intelligence & Advisory section"
         >
@@ -207,17 +226,17 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
             <div className="flex items-center gap-2 mb-1">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                 <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                Smithery Travel MCP Gateway
+                Travel Search Engine
               </span>
               <span className="text-xs text-[#74777e] font-mono">
-                Protocol: Model Context Protocol (ivy-poon)
+                Real-Time Availability & Live Pricing
               </span>
             </div>
             <h1 className="font-['Plus_Jakarta_Sans'] text-2xl md:text-3xl font-extrabold text-[#0b1c30] tracking-tight">
               Flight & Hotel Search Engine
             </h1>
             <p className="text-sm text-[#44474d] mt-1">
-              Specify your travel start date, arrival date at destination, and return date to pull verified flight routes and premier hotels.
+              Specify your destination date and return date to pull verified flight routes and premier hotels.
             </p>
           </div>
 
@@ -247,7 +266,7 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 
             {/* Destination Input */}
-            <div className="md:col-span-4">
+            <div className="md:col-span-5">
               <label className="block text-[11px] font-bold text-[#44474d] uppercase tracking-wider mb-1 flex items-center justify-between">
                 <span>Destination (City, Country)</span>
                 <span className="text-[10px] text-[#74777e] font-normal">Where to?</span>
@@ -267,28 +286,11 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
               </div>
             </div>
 
-            {/* Travel Start Date */}
-            <div className="md:col-span-2">
-              <label className="block text-[11px] font-bold text-[#44474d] uppercase tracking-wider mb-1 flex items-center justify-between">
-                <span>Travel Start Date</span>
-                <span className="text-[10px] text-[#74777e] font-normal">Departure</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={startDateInput}
-                  onChange={(e) => setStartDateInput(e.target.value)}
-                  className="w-full h-11 px-3 rounded-xl bg-white text-xs font-semibold text-[#0b1c30] border border-[#dce9ff] focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 shadow-2xs"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Destination Date */}
-            <div className="md:col-span-2">
+            {/* Destination Date (Starting Date: Today + 7d) */}
+            <div className="md:col-span-3">
               <label className="block text-[11px] font-bold text-[#44474d] uppercase tracking-wider mb-1 flex items-center justify-between">
                 <span>Destination Date</span>
-                <span className="text-[10px] text-emerald-700 font-bold">Arrive / Check-in</span>
+                <span className="text-[10px] text-emerald-700 font-bold">Today + 7d</span>
               </label>
               <div className="relative">
                 <input
@@ -301,11 +303,11 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
               </div>
             </div>
 
-            {/* Return Date */}
+            {/* Return Date (Today + 14d) */}
             <div className="md:col-span-2">
               <label className="block text-[11px] font-bold text-[#44474d] uppercase tracking-wider mb-1 flex items-center justify-between">
                 <span>Return Date</span>
-                <span className="text-[10px] text-[#74777e] font-normal">Flight Back</span>
+                <span className="text-[10px] text-blue-700 font-bold">Today + 14d</span>
               </label>
               <div className="relative">
                 <input
@@ -328,12 +330,12 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
                 {isSearching ? (
                   <>
                     <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                    <span>Querying MCP...</span>
+                    <span>Searching...</span>
                   </>
                 ) : (
                   <>
                     <span className="material-symbols-outlined text-[18px]">travel_explore</span>
-                    <span>Search Flights & Hotels</span>
+                    <span>Search</span>
                   </>
                 )}
               </button>
@@ -400,10 +402,10 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
         <div className="bg-white rounded-3xl p-12 text-center border border-[#eff4ff] shadow-xs">
           <div className="w-12 h-12 border-3 border-amber-500/20 border-t-amber-600 rounded-full animate-spin mx-auto mb-4"></div>
           <h3 className="font-['Plus_Jakarta_Sans'] text-lg font-bold text-[#0b1c30]">
-            Querying Smithery Travel MCP Endpoint...
+            Searching Real-Time Travel Availability...
           </h3>
           <p className="text-xs text-[#74777e] mt-1 max-w-md mx-auto">
-            Contacting <code className="font-mono text-[#0c1e34]">https://mcp.smithery.ai/ivy-poon</code> for live flight corridors and hotel inventory matching your dates.
+            Checking live flight corridors and hotel inventory matching your dates.
           </p>
         </div>
       )}
@@ -426,7 +428,7 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
                 </span>
               </div>
               <p className="text-xs text-[#74777e] mt-0.5">
-                Source: <span className="font-semibold text-[#0c1e34]">{results.source}</span> • Protocol: <code className="font-mono">{results.endpointUrl}</code>
+                Verified inventory & real-time pricing across major airlines and top-rated accommodations
               </p>
             </div>
 
@@ -483,7 +485,7 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
                       Available Flight Options
                     </h3>
                     <p className="text-xs text-[#74777e]">
-                      Departs {startDateInput} • Arrives at destination {destinationDateInput} • Returns {returnDateInput}
+                      Destination Date: {destinationDateInput} • Return Date: {returnDateInput}
                     </p>
                   </div>
                 </div>
@@ -826,7 +828,7 @@ export const FlightHotelSearchView: React.FC<FlightHotelSearchViewProps> = ({
             <div className="flex items-center gap-2.5 w-full md:w-auto">
               <button
                 type="button"
-                onClick={() => onNavigateToTripIntelligence(destinationInput, startDateInput, returnDateInput)}
+                onClick={() => onNavigateToTripIntelligence(destinationInput, destinationDateInput, returnDateInput)}
                 className="w-full md:w-auto px-5 py-2.5 rounded-xl font-bold text-xs bg-emerald-500 hover:bg-emerald-400 text-[#0c1e34] transition-all flex items-center justify-center gap-2 shadow-xs"
               >
                 <span>Proceed to Trip Intelligence & Advisory</span>

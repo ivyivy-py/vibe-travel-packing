@@ -44,7 +44,7 @@ export const Footer: React.FC<FooterProps> = ({ onSelectView }) => {
             <ul className="space-y-2 text-xs text-[#7686a1]">
               <li>
                 <button onClick={() => onSelectView('flight-hotel-search')} className="hover:text-white transition-colors flex items-center gap-1 text-emerald-400">
-                  <span>✈️ Flight & Hotel Search (MCP)</span>
+                  <span>✈️ Search Flights and Hotels</span>
                 </button>
               </li>
               <li>

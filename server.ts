@@ -223,7 +223,7 @@ Provide:
 
 Return valid JSON with this exact schema:
 {
-  "source": "Smithery MCP Engine (ivy-poon)",
+  "source": "Travel Search Engine",
   "endpointStatus": "connected",
   "flights": [
     {

@@ -180,17 +180,17 @@ export const TripPlannerView: React.FC<TripPlannerViewProps> = ({
         </div>
       </div>
 
-      {/* Primary Section Switcher Tabs: Search Flights & Hotels (MCP) | Trip Intelligence & Advisory */}
+      {/* Primary Section Switcher Tabs: Search Flights and Hotels | Trip Intelligence & Advisory */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-1.5 bg-white/95 backdrop-blur rounded-2xl border border-[#dce9ff] shadow-xs">
         <button
           type="button"
           onClick={() => onNavigateToView('flight-hotel-search')}
           className="flex-1 py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2.5 transition-all bg-white text-[#44474d] hover:bg-[#eff4ff] hover:text-[#0b1c30] border border-slate-200 hover:border-slate-300 shadow-2xs group"
-          title="Search Flights and Hotels with live MCP endpoint https://mcp.smithery.ai/ivy-poon"
+          title="Search Flights and Hotels"
         >
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span className="material-symbols-outlined text-[18px] text-blue-600 group-hover:scale-110 transition-transform">travel_explore</span>
-          <span>✈️ Search Flights & Hotels (https://mcp.smithery.ai/ivy-poon)</span>
+          <span>✈️ Search Flights and Hotels</span>
           <span className="material-symbols-outlined text-[14px] text-slate-400">arrow_forward</span>
         </button>
         <button

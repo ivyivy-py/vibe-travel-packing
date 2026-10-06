@@ -829,7 +829,7 @@ export async function searchFlightsAndHotels(
       const data = await proxyRes.json();
       if (data && (data.flights?.length > 0 || data.hotels?.length > 0)) {
         return {
-          source: data.source || 'Smithery MCP Engine (ivy-poon)',
+          source: data.source || 'Travel Search Engine',
           endpointUrl: SMITHERY_ENDPOINT,
           endpointStatus: data.endpointStatus || 'live',
           query: params,
@@ -887,7 +887,7 @@ export async function searchFlightsAndHotels(
   // If live MCP payload returned items
   if (liveMcpData && (liveMcpData.flights || liveMcpData.hotels)) {
     return {
-      source: 'Smithery MCP Live Gateway (https://mcp.smithery.ai/ivy-poon)',
+      source: 'Travel Search Live Gateway',
       endpointUrl: SMITHERY_ENDPOINT,
       endpointStatus: 'live',
       query: params,
@@ -964,7 +964,7 @@ export async function searchFlightsAndHotels(
     }));
 
     return {
-      source: 'Smithery Travel Service (ivy-poon Protocol)',
+      source: 'Travel Search Service',
       endpointUrl: SMITHERY_ENDPOINT,
       endpointStatus: 'connected',
       query: params,
@@ -977,7 +977,7 @@ export async function searchFlightsAndHotels(
   // 4. Custom destination synthesizer
   const custom = generateCustomTravelResults(params);
   return {
-    source: 'Smithery Travel Intelligence (ivy-poon Protocol)',
+    source: 'Travel Intelligence Search',
     endpointUrl: SMITHERY_ENDPOINT,
     endpointStatus: 'connected',
     query: params,
